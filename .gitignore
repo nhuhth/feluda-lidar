@@ -47,3 +47,11 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# experimental dirs/files
+datasets/
+apikey.txt
+testapp.R
+.RData
+.DS_Store
+project.Rproj
