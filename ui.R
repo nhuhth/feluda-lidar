@@ -1,5 +1,8 @@
 library(shiny)
 library(shinydashboard)
+library(curl)
+library(jsonlite)
+
 
 ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
@@ -172,20 +175,28 @@ ui <- dashboardPage(
             title = "Chat with ChatGPT",
             fluidRow(
               box(
-                title = "Chat with your Dataset using ChatGPT",
+                title = "Chat with your Dataset using Llama2",
                 width = 12, 
                 solidHeader = TRUE, 
                 verbatimTextOutput("chat_questions"),
                 fluidRow(
                   box(
+                    # title = "ChatGPT Answers",
+                    width = 12,
+                    solidHeader = TRUE,
+                    uiOutput("chat_response_output")
+                  )
+                ),
+                fluidRow(
+                  box(
                     title = "Questions",
-                    width = 4, 
+                    width = 12,
                     solidHeader = TRUE,
                     textAreaInput(
                       "question_input",
                       label = NULL,
                       placeholder = "Enter your question(s) here",
-                      rows = 5
+                      rows = 6
                     ),
                     actionButton(
                       "chat_question_btn",
@@ -193,14 +204,9 @@ ui <- dashboardPage(
                       class = "btn btn-success btn-block",
                       style="padding: 4px 8px; font-size: 12px; max-width: 100px; align:right;"
                     )
-                  ),
-                  box(
-                    title = "ChatGPT Answers",
-                    width = 7, 
-                    solidHeader = TRUE,
-                    htmlOutput("chat_response_output")
-                  ),
+                  )
                 )
+                
               )
             )
           )

@@ -50,8 +50,7 @@ rsconnect/
 
 # experimental dirs/files
 datasets/
-apikey.txt
-testapp.R
+RnD
 .RData
 .DS_Store
 project.Rproj
