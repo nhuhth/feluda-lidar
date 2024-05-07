@@ -52,6 +52,7 @@ EDAApp <- R6Class(
         
         updateTabsetPanel(session, "eda_summary")
         
+        chat_data <- reactiveVal(data.frame())
         observeEvent(input$file$datapath, {
           observe({
             # Disable the "Analysis" button if no file is uploaded
@@ -102,7 +103,6 @@ EDAApp <- R6Class(
           })
         })
         
-        chat_data <- reactiveVal(NULL)
         call_api_with_curl <- function(json_payload) {
           h <- new_handle()
           handle_setopt(h, copypostfields = json_payload)
