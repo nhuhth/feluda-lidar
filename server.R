@@ -62,7 +62,7 @@ EDAApp <- R6Class(
               
               # Read the uploaded CSV file
               csv_data <- read.csv(input$file$datapath)
-              json_data <<- jsonify::to_json(head(csv_data, 100))
+              json_data <<- jsonify::to_json(csv_data)
 
               # Render dataframe header
               output$dataframe <- DT::renderDataTable({
@@ -102,7 +102,7 @@ EDAApp <- R6Class(
           })
         })
         
-        chat_data <- reactiveVal(data.frame())
+        chat_data <- reactiveVal(NULL)
         call_api_with_curl <- function(json_payload) {
           h <- new_handle()
           handle_setopt(h, copypostfields = json_payload)
