@@ -52,7 +52,7 @@ EDAApp <- R6Class(
         
         updateTabsetPanel(session, "eda_summary")
         
-        chat_data <- reactiveVal(data.frame())
+        csv_to_json_data <- reactiveVal(NULL)
         observeEvent(input$file$datapath, {
           observe({
             # Disable the "Analysis" button if no file is uploaded
@@ -63,7 +63,8 @@ EDAApp <- R6Class(
               
               # Read the uploaded CSV file
               csv_data <- read.csv(input$file$datapath)
-              json_data <<- jsonify::to_json(csv_data)
+              # json_data <<- jsonify::to_json(csv_data)
+              json_data <<- csv_to_json_data(jsonify::to_json(csv_data))
 
               # Render dataframe header
               output$dataframe <- DT::renderDataTable({
@@ -103,6 +104,7 @@ EDAApp <- R6Class(
           })
         })
         
+        chat_data <- reactiveVal(data.frame())
         call_api_with_curl <- function(json_payload) {
           h <- new_handle()
           handle_setopt(h, copypostfields = json_payload)
