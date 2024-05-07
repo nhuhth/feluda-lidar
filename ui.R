@@ -83,14 +83,14 @@ ui <- dashboardPage(
                 )
               ),
               box(
-                id = "dataframe_header",
+                id = "dataframe",
                 title = "Uploaded dataset as tabular format",
                 width = 8,
                 fluidRow(
                   box(
                     width = 12, 
                     solidHeader = TRUE,
-                    DT::dataTableOutput("dataframe_header")
+                    DT::dataTableOutput("dataframe")
                   )
                 )
               ),
@@ -172,10 +172,24 @@ ui <- dashboardPage(
           
           tabPanel(
             id = "chat",
-            title = "Chat with ChatGPT",
+            title = "Chat with Llama2",
             fluidRow(
               box(
-                title = "Chat with your Dataset using Llama2",
+                id = "dataframe_header",
+                title = "Top 5 rows of the dataset.",
+                width = 12,
+                fluidRow(
+                  box(
+                    width = 12, 
+                    solidHeader = TRUE,
+                    DT::dataTableOutput("dataframe_header")
+                  )
+                )
+              )
+            ),
+            fluidRow(
+              box(
+                title = "Chat with your dataset using Llama2",
                 width = 12, 
                 solidHeader = TRUE, 
                 verbatimTextOutput("chat_questions"),

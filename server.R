@@ -2,36 +2,37 @@ library(shiny)
 library(R6)
 library(curl)
 library(jsonlite)
+library(jsonify)
 
 
-model_list <- read.table(text = system("ollama list", intern = TRUE),
-                         sep = "\t", row.names = NULL)
+model_list <- read.table(
+  text = system("ollama list", intern = TRUE),
+  sep = "\t", 
+  row.names = NULL
+)
+
 # tabs at the end of each model row adds an additional empty column
 model_list$MODIFIED <- NULL
 colnames(model_list) <- c("NAME", "ID", "SIZE", "MODIFIED")
 model_list$NAME <- trimws(model_list$NAME)
-# print(model_list)
 
 # model <- "llama3:latest"
 temperature <- 0.7
 max_length <- 512
+
 sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
-This project is a part of the programme 'Data Science and Business Analytics' at the University of Warsaw.
+This project is a part of the course of 'Advanced R' of the programme 'Data Science and Business Analytics' at the University of Warsaw.
 Be mindfull that Porimol, Nhu and Shoku are the contributors of this project, who gave you this name.
-Your main responsibility to assist users only about R programming and given dataset related question based on the given dataset by users. 
-R code should be pretify and easy to understand.
-If users ask any other question, you can redirect them to the appropriate resources or suggest them to ask the question in the appropriate forum.
-Please answer the following questions based on the given dataset."
+Your main responsibility to assist users only about R programming based on the given 'jsonofied dataset' and related question based on the given dataset.
+If users asked you to provide statistics of the dataset, please do help them by providing R code.
+If users ask you about any other programming related question, politely explain them that your responsibility only about R programming and given dataset."
+# sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
+# Your main responsibility to assist users only about R programming and if user ask you to perform any task on the given data do it."
 
 # Define the EDAApp class
 EDAApp <- R6Class(
   "EDAApp",
   public = list(
-    data = NULL,
-    initialize = function(model_name = "llama2:latest") {
-      # Initialize data
-      self$data <- data
-    },
     server = function(model_name = "llama2:latest") {
       function(input, output, session) {
         # Data frame of contributors
@@ -60,32 +61,40 @@ EDAApp <- R6Class(
               print("File uploaded")
               
               # Read the uploaded CSV file
-              self$data <- read.csv(input$file$datapath)
+              csv_data <- read.csv(input$file$datapath)
+              json_data <<- jsonify::to_json(head(csv_data, 100))
 
+              # Render dataframe header
+              output$dataframe <- DT::renderDataTable({
+                if (!is.null(input$file)) {
+                  DT::datatable(csv_data)
+                }
+              })
+              
               # Render dataframe header
               output$dataframe_header <- DT::renderDataTable({
                 if (!is.null(input$file)) {
-                  DT::datatable(self$data)
+                  DT::datatable(head(csv_data, 5))
                 }
               })
               
               # Perform summary statistics or any other analysis you need
-              summary_data <- summary(self$data)
+              summary_data <- summary(csv_data)
               # Update the output for the "Summary" tab
               output$null_values_output <- renderPrint({
-                sum(is.na(self$data))
+                sum(is.na(csv_data))
               })
               output$analysis_summary <- renderPrint({
                 summary_data
               })
               # Extract data types
-              data_types <- sapply(self$data, class)
+              data_types <- sapply(csv_data, class)
               output$data_types_output <- renderPrint({
                 data_types
               })
               updateTabsetPanel(session, "eda_summary", "analysis_summary")
               
-              data_types <- sapply(self$data, class)
+              data_types <- sapply(csv_data, class)
               output$data_types_output <- renderPrint({
                 data_types
               })
@@ -107,6 +116,9 @@ EDAApp <- R6Class(
         }
         
         call_ollama_api <- function(prompt, model_name, temperature, max_length, sysprompt) {
+          prompt <- paste0(" Based on this data: ", json_data, ", Answer this question: ", prompt)
+          # print(prompt)
+          
           data_list <- list(
             model = model_name, 
             prompt = prompt, 
@@ -143,26 +155,48 @@ EDAApp <- R6Class(
           }
         })
         
-        # Function to highlight R code within mixed_output
-        highlight_R_code <- function(output) {
-          output <- gsub("```r(.*?)```", "<pre><code class='r'>\\1</code></pre>", output, perl = TRUE)
-          return(output)
+        r_code_highlight <- function(code, language = "r") {
+          paste0("<pre><code class = 'language-", language, "'>", code, "</code></pre>")
+        }
+        
+        # Function to extract R code from text
+        extract_R_code <- function(text) {
+            code <- regmatches(text, regexec("```([^`]*)```", text))[[1]][2]
+            if (is.null(code) || !nzchar(code)) {
+                return("dddd")
+            }
+            return(r_code_highlight(code))
+        }
+
+        # Function to extract text surrounding R code
+        extract_surrounding_text <- function(text) {
+            surrounding_text <- gsub("```([^`]*)```", "", text)
+            if (is.null(surrounding_text) || !nzchar(surrounding_text)) {
+                return(NULL)
+            }
+            return(trimws(surrounding_text))
         }
         
         output$chat_response_output <- renderUI({
           chatBox <- lapply(1:nrow(chat_data()), function(i) {
-            print(highlight_R_code(chat_data()[i, "message"]))
+            text_code <- chat_data()[i, "message"]
+            if (is.null(text_code) || !nzchar(text_code)) {
+              return(NULL)
+            }
+            # Extract R code
+            r_code <- extract_R_code(text_code)
+            extract_text <- extract_surrounding_text(text_code)
             tags$div(
               class = ifelse(
-                chat_data()[i, "source"] == "User", 
-                "alert alert-secondary", 
+                chat_data()[i, "source"] == "User",
+                "alert alert-secondary",
                 "alert alert-success"
               ),
               HTML(
-                # paste0("<b>", chat_data()[i, "source"], ":</b> ", text = chat_data()[i, "message"])
-                paste0("<b>", chat_data()[i, "source"], ":</b> ", text = highlight_R_code(chat_data()[i, "message"]))
+                paste0("<b>", chat_data()[i, "source"], ":</b> ", text = extract_text, r_code)
               )
             )
+            
           })
           do.call(tagList, chatBox)
         })
