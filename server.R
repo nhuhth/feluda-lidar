@@ -1,9 +1,10 @@
 library(shiny)
+library(shinyjs)
 library(R6)
 library(curl)
 library(jsonlite)
 library(jsonify)
-
+library(ggplot2)
 
 model_list <- read.table(
   text = system("ollama list", intern = TRUE),
@@ -65,7 +66,7 @@ EDAApp <- R6Class(
               csv_data <- read.csv(input$file$datapath)
               # json_data <<- jsonify::to_json(csv_data)
               json_data <<- csv_to_json_data(jsonify::to_json(csv_data))
-
+              
               # Render dataframe header
               output$dataframe <- DT::renderDataTable({
                 if (!is.null(input$file)) {
@@ -100,9 +101,87 @@ EDAApp <- R6Class(
               output$data_types_output <- renderPrint({
                 data_types
               })
+              
+              
+              ## Explore Data
+              # pairs plot - always
+              output$expPairsPlot <- renderPlot({
+                featurePlot(x=csv_data, 
+                            y=csv_data, 
+                            plot='pairs', auto.key=list(columns=2))
+              })
+              
+              # generate variable selectors for individual plots
+              output$expXaxisVarSelector <- renderUI({
+                selectInput('expXaxisVar', 'Variable on x-axis', 
+                            choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[1])
+              })
+              
+              getYaxisVarSelector <- function(geom) { 
+                # wy = with y, wo = without y (or disable)
+                widget <- selectInput('expYaxisVar', 'Variable on y-axis', 
+                                      choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[2])
+                wy <- widget
+                woy <- disable(widget)
+                switch(geom,
+                       point = wy,
+                       boxplot = wy,
+                       histogram = woy,
+                       density = woy
+                )
+              }
+              output$expYaxisVarSelector <- renderUI({
+                getYaxisVarSelector(input$singlePlotGeom)
+              })
+              
+              output$expColorVarSelector <- renderUI({
+                selectInput('expColorVar', 'Variable to color by', 
+                            choices=as.list(c(colnames(csv_data))))
+                            #selected=input$target)
+              })
+              
+              # create ggplot statement based on geom
+              add_ggplot <- function(geom) {
+                gx <- ggplot(csv_data, aes_string(x=input$expXaxisVar))
+                gxy <- ggplot(csv_data, aes_string(x=input$expXaxisVar, y=input$expYaxisVar))
+                switch(geom,
+                       point = gxy,
+                       boxplot = gxy,
+                       histogram = gx,
+                       density = gx
+                )
+              }
+              
+              # create ggplot geom
+              add_geom <- function(geom) {
+                switch(geom,
+                       point = geom_point(aes_string(color=input$expColorVar)),
+                       boxplot = geom_boxplot(aes_string(color=input$expColorVar)),
+                       histogram = geom_histogram(aes_string(color=input$expColorVar)),
+                       density = geom_density(aes_string(color=input$expColorVar))
+                )
+              }
+              
+              output$expSinglePlot <- renderPlot({
+                g <- add_ggplot(input$singlePlotGeom) + add_geom(input$singlePlotGeom)
+                print(g)
+              })
+              
             }
           })
         })
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         chat_data <- reactiveVal(data.frame())
         call_api_with_curl <- function(json_payload) {
@@ -163,20 +242,20 @@ EDAApp <- R6Class(
         
         # Function to extract R code from text
         extract_R_code <- function(text) {
-            code <- regmatches(text, regexec("```([^`]*)```", text))[[1]][2]
-            if (is.null(code) || !nzchar(code)) {
-                return("dddd")
-            }
-            return(r_code_highlight(code))
+          code <- regmatches(text, regexec("```([^`]*)```", text))[[1]][2]
+          if (is.null(code) || !nzchar(code)) {
+            return("dddd")
+          }
+          return(r_code_highlight(code))
         }
-
+        
         # Function to extract text surrounding R code
         extract_surrounding_text <- function(text) {
-            surrounding_text <- gsub("```([^`]*)```", "", text)
-            if (is.null(surrounding_text) || !nzchar(surrounding_text)) {
-                return(NULL)
-            }
-            return(trimws(surrounding_text))
+          surrounding_text <- gsub("```([^`]*)```", "", text)
+          if (is.null(surrounding_text) || !nzchar(surrounding_text)) {
+            return(NULL)
+          }
+          return(trimws(surrounding_text))
         }
         
         output$chat_response_output <- renderUI({

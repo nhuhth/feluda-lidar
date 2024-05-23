@@ -4,6 +4,7 @@ library(curl)
 library(jsonlite)
 
 
+
 ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
   dashboardSidebar(
@@ -141,33 +142,22 @@ ui <- dashboardPage(
           ),
           
           
-          tabPanel(
-            id = "data_visualization_plots",
-            title = "Data Visualization",
-            fluidRow(
-              box(
-                title = "Visualization Data for Better Insights",
-                width = 12, 
-                solidHeader = TRUE, 
-                fluidRow(
-                  id = "categorical_and_numerical_data_plot",
-                  title = "Categorical and Numerical Data Plot",
-                  box(
-                    title = "Categorical Data Plot",
-                    width = 6, 
-                    solidHeader = TRUE,
-                    verbatimTextOutput("categorical_data_plot")
-                  ),
-                  box(
-                    title = "Numerical Data Plot",
-                    width = 6, 
-                    solidHeader = TRUE,
-                    verbatimTextOutput("numerical_data_plot")
-                  ),
-                )
-                
-              )
-            )
+          tabPanel( id = "visual",
+                    title = 'Visualization',
+                    sidebarLayout(
+                      sidebarPanel(
+                        selectInput('singlePlotGeom', 'Select plot type', 
+                                    choices=c('point', 'boxplot', 'histogram', 'density'),
+                                    selected='boxplot'),
+                        uiOutput('expXaxisVarSelector'),
+                        uiOutput('expYaxisVarSelector'),
+                        uiOutput('expColorVarSelector')
+                      ),
+                      mainPanel(
+                        h4('One and Two Variable Plot'),
+                        plotOutput('expSinglePlot')
+                      )
+                    )
           ),
           
           tabPanel(
