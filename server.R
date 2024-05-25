@@ -1,12 +1,3 @@
-library(shiny)
-library(shinyjs)
-library(R6)
-library(curl)
-library(jsonlite)
-library(jsonify)
-library(reshape2)
-library(ggplot2)
-
 model_list <- read.table(
   text = system("ollama list", intern = TRUE),
   sep = "\t", 
@@ -101,20 +92,22 @@ EDAApp <- R6Class(
               output$correlation_matrix <- renderPrint({
                 correlation_matrix1
               })
-              # correlation Plot 
+              # cor plot
+              
+              # Update selectInput choices based on the dataset's column names
+              updateSelectInput(session, "col", choices = colnames(csv_data))
+              
               output$correlation_plot <- renderPlot({
-                # Convert the correlation matrix to a long-format dataframe
-                correlation_df <- melt(correlation_matrix1)
+                req(input$col)  # Ensure input$col is not NULL
                 
-                # Plot the correlation matrix using ggplot2
-                ggplot(correlation_df, aes(Var2, Var1, fill = value)) +
-                  geom_tile(color = "white") +
-                  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), space = "Lab",
-                                       name="Correlation") +
-                  theme_minimal() +
-                  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 8, hjust = 1)) +
-                  coord_fixed()
+                selected_data <- csv_data[, input$col, drop = FALSE]
+                
+                # Generate the correlation chart using PerformanceAnalytics
+                chart.Correlation(selected_data, histogram=TRUE, pch=19)
               })
+              
+              
+            
               
               updateTabsetPanel(session, "eda_summary", "analysis_summary")
 
@@ -189,18 +182,6 @@ EDAApp <- R6Class(
             }
           })
         })
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         chat_data <- reactiveVal(data.frame())
         call_api_with_curl <- function(json_payload) {
