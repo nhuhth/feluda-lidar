@@ -1,8 +1,3 @@
-library(shiny)
-library(shinydashboard)
-library(curl)
-library(jsonlite)
-
 ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
   dashboardSidebar(
@@ -128,6 +123,13 @@ ui <- dashboardPage(
                     verbatimTextOutput("correlation_matrix")
                   ),
                 ),
+                fluidRow(
+                  column(4,
+                         selectInput("col", "Choose some columns to draw correlation",
+                                     choices = NULL, multiple = TRUE)
+                  )
+                ),
+               
                 fluidRow(
                   box(
                     title = "Correlation Plot",
