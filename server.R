@@ -1,17 +1,6 @@
 library(PerformanceAnalytics)
 
-model_list <- read.table(
-  text = system("ollama list", intern = TRUE),
-  sep = "\t", 
-  row.names = NULL
-)
-
-# tabs at the end of each model row adds an additional empty column
-model_list$MODIFIED <- NULL
-colnames(model_list) <- c("NAME", "ID", "SIZE", "MODIFIED")
-model_list$NAME <- trimws(model_list$NAME)
-
-# model <- "llama3:latest"
+# llama model parameters
 temperature <- 0.7
 max_length <- 512
 
@@ -28,7 +17,7 @@ If users ask you about any other programming related question, politely explain 
 EDAApp <- R6Class(
   "EDAApp",
   public = list(
-    server = function(model_name = "llama2:latest") {
+    server = function(model_name = "llama3:latest") {
       function(input, output, session) {
         # Data frame of contributors
         contributors_df <- data.frame(

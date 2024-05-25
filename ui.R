@@ -53,7 +53,13 @@ ui <- dashboardPage(
             title = "References", 
             width = 12, 
             solidHeader = TRUE, 
-            "Dibia, V. (2023). Lida: A tool for automatic generation of grammar-agnostic visualizations and infographics using large language models. arXiv preprint arXiv:2303.02927."
+            "[1] Dibia, V. (2023). Lida: A tool for automatic generation of grammar-agnostic visualizations and infographics using large language models. arXiv preprint arXiv:2303.02927 .",
+            tags$br(),
+            "[2] Touvron, Hugo, et al. 'Llama: Open and efficient foundation language models.' arXiv preprint arXiv:2302.13971 (2023) .",
+            tags$br(),
+            "[3] 'Ollama (Version v0.1.38)' [Computer software]. https://github.com/ollama/ollama .",
+            tags$br(),
+            "[4] Maria Kubara and Ewa Weychert (2024). 'Advanced Programming in R'. https://usosweb.wne.uw.edu.pl/kontroler.php?_action=katalog2/przedmioty/pokazPrzedmiot&kod=2400-DS1APR ."
           )
         )
       ),
@@ -67,7 +73,7 @@ ui <- dashboardPage(
               box(
                 title = "Uplaod a CSV file!",
                 #tags$hr(),
-                width = 4, 
+                width = 3,
                 solidHeader = TRUE, 
                 fileInput(
                   "file",
@@ -79,7 +85,7 @@ ui <- dashboardPage(
               box(
                 id = "dataframe",
                 title = "Uploaded dataset as tabular format",
-                width = 8,
+                width = 9,
                 fluidRow(
                   box(
                     width = 12, 
@@ -87,8 +93,8 @@ ui <- dashboardPage(
                     DT::dataTableOutput("dataframe")
                   )
                 )
-              ),
-            ),
+              )
+            )
           ),
           tabPanel(
             id = "eda_summary",
@@ -102,13 +108,15 @@ ui <- dashboardPage(
                 fluidRow(
                   box(
                     title = "Data Types",
-                    width = 6, 
+                    width = 12, 
                     solidHeader = TRUE,
                     verbatimTextOutput("data_types_output")
-                  ),
+                  )
+                ),
+                fluidRow(
                   box(
                     title = "Null Values",
-                    width = 6, 
+                    width = 12, 
                     solidHeader = TRUE,
                     verbatimTextOutput("null_values_output")
                   ),
@@ -154,33 +162,32 @@ ui <- dashboardPage(
                     plotOutput("correlation_histogram_plot")
                   )
                 )
-                
               )
             )
           ),
           
-          
-          tabPanel( id = "visual",
-                    title = 'Visualization',
-                    sidebarLayout(
-                      sidebarPanel(
-                        selectInput('singlePlotGeom', 'Select plot type', 
-                                    choices=c('point', 'boxplot', 'histogram', 'density'),
-                                    selected='boxplot'),
-                        uiOutput('expXaxisVarSelector'),
-                        uiOutput('expYaxisVarSelector'),
-                        uiOutput('expColorVarSelector')
-                      ),
-                      mainPanel(
-                        h4('One and Two Variable Plot'),
-                        plotOutput('expSinglePlot')
-                      )
-                    )
+          tabPanel(
+            id = "visual",
+            title = 'Visualization',
+            sidebarLayout(
+              sidebarPanel(
+                selectInput('singlePlotGeom', 'Select plot type', 
+                            choices=c('point', 'boxplot', 'histogram', 'density'),
+                            selected='boxplot'),
+                uiOutput('expXaxisVarSelector'),
+                uiOutput('expYaxisVarSelector'),
+                uiOutput('expColorVarSelector')
+              ),
+              mainPanel(
+                h4('One and Two Variable Plot'),
+                plotOutput('expSinglePlot')
+              )
+            )
           ),
           
           tabPanel(
             id = "chat",
-            title = "Chat with Llama2",
+            title = "Chat with Llama",
             fluidRow(
               box(
                 id = "dataframe_header",
@@ -197,13 +204,12 @@ ui <- dashboardPage(
             ),
             fluidRow(
               box(
-                title = "Chat with your dataset using Llama2",
+                title = "Chat with your dataset using Llama",
                 width = 12, 
                 solidHeader = TRUE, 
                 verbatimTextOutput("chat_questions"),
                 fluidRow(
                   box(
-                    # title = "ChatGPT Answers",
                     width = 12,
                     solidHeader = TRUE,
                     uiOutput("chat_response_output")
@@ -228,7 +234,6 @@ ui <- dashboardPage(
                     )
                   )
                 )
-                
               )
             )
           )
