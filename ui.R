@@ -124,16 +124,18 @@ ui <- dashboardPage(
                   title = "Correlation",
                   box(
                     title = "Correlation Matrix",
-                    width = 6, 
+                    width = 10, 
                     solidHeader = TRUE,
                     verbatimTextOutput("correlation_matrix")
                   ),
+                ),
+                fluidRow(
                   box(
                     title = "Correlation Plot",
-                    width = 6, 
+                    width = 10, 
                     solidHeader = TRUE,
-                    verbatimTextOutput("correlation_plot")
-                  ),
+                    plotOutput("correlation_plot")
+                  )
                 )
                 
               )
