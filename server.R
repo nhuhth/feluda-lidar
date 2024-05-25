@@ -4,6 +4,7 @@ library(R6)
 library(curl)
 library(jsonlite)
 library(jsonify)
+library(reshape2)
 library(ggplot2)
 
 model_list <- read.table(
@@ -95,13 +96,32 @@ EDAApp <- R6Class(
               output$data_types_output <- renderPrint({
                 data_types
               })
-              updateTabsetPanel(session, "eda_summary", "analysis_summary")
+              # Correlation Matrix
+              correlation_matrix1 <- cor(csv_data)
+              output$correlation_matrix <- renderPrint({
+                correlation_matrix1
+              })
+              # correlation Plot 
+              output$correlation_plot <- renderPlot({
+                # Convert the correlation matrix to a long-format dataframe
+                correlation_df <- melt(correlation_matrix1)
+                
+                # Plot the correlation matrix using ggplot2
+                ggplot(correlation_df, aes(Var2, Var1, fill = value)) +
+                  geom_tile(color = "white") +
+                  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), space = "Lab",
+                                       name="Correlation") +
+                  theme_minimal() +
+                  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 8, hjust = 1)) +
+                  coord_fixed()
+              })
               
+              updateTabsetPanel(session, "eda_summary", "analysis_summary")
+
               data_types <- sapply(csv_data, class)
               output$data_types_output <- renderPrint({
                 data_types
               })
-              
               
               ## Explore Data
               # pairs plot - always
@@ -166,7 +186,6 @@ EDAApp <- R6Class(
                 g <- add_ggplot(input$singlePlotGeom) + add_geom(input$singlePlotGeom)
                 print(g)
               })
-              
             }
           })
         })

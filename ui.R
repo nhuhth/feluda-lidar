@@ -3,8 +3,6 @@ library(shinydashboard)
 library(curl)
 library(jsonlite)
 
-
-
 ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
   dashboardSidebar(
@@ -125,16 +123,18 @@ ui <- dashboardPage(
                   title = "Correlation",
                   box(
                     title = "Correlation Matrix",
-                    width = 6, 
+                    width = 12, 
                     solidHeader = TRUE,
                     verbatimTextOutput("correlation_matrix")
                   ),
+                ),
+                fluidRow(
                   box(
                     title = "Correlation Plot",
-                    width = 6, 
+                    width = 10, 
                     solidHeader = TRUE,
-                    verbatimTextOutput("correlation_plot")
-                  ),
+                    plotOutput("correlation_plot")
+                  )
                 )
                 
               )
