@@ -1,12 +1,3 @@
-library(shiny)
-library(shinyjs)
-library(R6)
-library(curl)
-library(jsonlite)
-library(jsonify)
-library(reshape2)
-library(ggplot2)
-
 model_list <- read.table(
   text = system("ollama list", intern = TRUE),
   sep = "\t", 
@@ -189,18 +180,6 @@ EDAApp <- R6Class(
             }
           })
         })
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         chat_data <- reactiveVal(data.frame())
         call_api_with_curl <- function(json_payload) {

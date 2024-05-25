@@ -1,8 +1,3 @@
-library(shiny)
-library(shinydashboard)
-library(curl)
-library(jsonlite)
-
 ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
   dashboardSidebar(
