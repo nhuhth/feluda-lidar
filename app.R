@@ -7,8 +7,8 @@ check_and_install <- function(pkg) {
 }
 
 # List of required packages
-packages <- c("shiny", "shinydashboard", "shinyjs", "R6", "curl", 
-              "jsonlite", "jsonify", "reshape2", "ggplot2", "dplyr")
+packages <- c("shiny", "shinydashboard", "shinyjs", "R6", "curl",
+              "jsonlite", "jsonify", "reshape2", "ggplot2", "dplyr", "PerformanceAnalytics")
 
 # Check and install each package
 lapply(packages, check_and_install)

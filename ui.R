@@ -125,10 +125,33 @@ ui <- dashboardPage(
                 ),
                 fluidRow(
                   box(
-                    title = "Correlation Plot",
-                    width = 10, 
+                    title = "Correlation Plot with Selected Feature Variables",
+                    width = 4, 
+                    solidHeader = TRUE,
+                    selectInput(
+                      "col", 
+                      "Select columns to plot correlation",
+                      choices = NULL, multiple = TRUE)
+                  )
+                ),
+                fluidRow(
+                  box(
+                    width = 12, 
+                    solidHeader = TRUE,
+                    verbatimTextOutput("dynamic_corr_matrix")
+                  )
+                ),
+               
+                fluidRow(
+                  box(
+                    width = 6, 
                     solidHeader = TRUE,
                     plotOutput("correlation_plot")
+                  ),
+                  box(
+                    width = 6, 
+                    solidHeader = TRUE,
+                    plotOutput("correlation_histogram_plot")
                   )
                 )
                 

@@ -1,3 +1,5 @@
+library(PerformanceAnalytics)
+
 model_list <- read.table(
   text = system("ollama list", intern = TRUE),
   sep = "\t", 
@@ -88,23 +90,57 @@ EDAApp <- R6Class(
                 data_types
               })
               # Correlation Matrix
-              correlation_matrix1 <- cor(csv_data)
+              corr_matrix <- cor(csv_data)
               output$correlation_matrix <- renderPrint({
-                correlation_matrix1
+                corr_matrix
               })
-              # correlation Plot 
+              
+              # Update selectInput choices based on the dataset's column names
+              updateSelectInput(session, "col", choices = colnames(csv_data))
+              
+              # Dynamic correlation Matrix
+              output$dynamic_corr_matrix <- renderPrint({
+                req(input$col)  # Ensure input$col is not NULL
+                
+                selected_data <- csv_data[, input$col, drop = FALSE]
+                # Correlation Matrix
+                dynamic_matrix <- cor(selected_data)
+                dynamic_matrix
+              })
+              
               output$correlation_plot <- renderPlot({
+                req(input$col)  # Ensure input$col is not NULL
+                
+                selected_data <- csv_data[, input$col, drop = FALSE]
+                # Correlation Matrix
+                corr_matrix1 <- cor(selected_data)
+                
                 # Convert the correlation matrix to a long-format dataframe
-                correlation_df <- melt(correlation_matrix1)
+                corr_df <- melt(corr_matrix1)
                 
                 # Plot the correlation matrix using ggplot2
-                ggplot(correlation_df, aes(Var2, Var1, fill = value)) +
+                ggplot(corr_df, aes(Var2, Var1, fill = value)) +
                   geom_tile(color = "white") +
                   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), space = "Lab",
                                        name="Correlation") +
+                  labs(
+                    title = "Correlation color range (-1, 1)",
+                    x = "X-axis Feature Variables",
+                    y = "Y-axis Feature Variables"
+                  ) +
                   theme_minimal() +
                   theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 8, hjust = 1)) +
                   coord_fixed()
+              })
+              
+              output$correlation_histogram_plot <- renderPlot({
+                req(input$col)  # Ensure input$col is not NULL
+                
+                selected_data <- csv_data[, input$col, drop = FALSE]
+                
+                # Generate the correlation chart using PerformanceAnalytics
+                chart.Correlation(selected_data, histogram=TRUE, pch=19)
+                mtext("Correlation Matrix with Histogram", outer = TRUE, line = -1, cex = 1)
               })
               
               updateTabsetPanel(session, "eda_summary", "analysis_summary")
