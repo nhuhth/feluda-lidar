@@ -17,4 +17,4 @@ lapply(packages, check_and_install)
 source("ui.R")
 source("server.R")
 
-shinyApp(ui=, server = server)
+shinyApp(ui=ui, server = server)

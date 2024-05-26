@@ -1,8 +1,6 @@
 library(PerformanceAnalytics)
-
-# llama model parameters
-temperature <- 0.7
-max_length <- 512
+source("chat.R")
+source("eda.R")
 
 sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
 This project is a part of the course of 'Advanced R' of the programme 'Data Science and Business Analytics' at the University of Warsaw.
@@ -13,26 +11,47 @@ If users ask you about any other programming related question, politely explain 
 # sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
 # Your main responsibility to assist users only about R programming and if user ask you to perform any task on the given data do it."
 
-# Define the EDAApp class
-EDAApp <- R6Class(
-  "EDAApp",
+# Define the LIDArApp class
+LIDArApp <- R6Class(
+  "LIDArApp",
   public = list(
-    server = function(model_name = "llama3:latest") {
-      function(input, output, session) {
-        # Data frame of contributors
-        contributors_df <- data.frame(
-          Fullname = c("Porimol Chandro", "Shokoufe Naseri", "Ho Thi Hoang Nhu"),
-          Student.ID = c(468264, 466750, 466503),
-          Email = c("p.chandro@student.uw.edu.pl", "s.naseri@student.uw.edu.pl", "t.ho2@student.uw.edu.pl"),
-          stringsAsFactors = FALSE
-        )
-        contributors_df$Student.ID <- format(contributors_df$Student.ID, scientific = FALSE)
-        
-        # Render contributors table
-        output$contributors_table <- renderTable({
+    llm_chat = NULL,
+    eda = NULL,
+    
+    initialize = function() {
+      # Initialize the LLMChat object
+      self$llm_chat <- LLMChat$new(
+        model_name = "llama3:latest",
+        temperature = 0.7,
+        max_length = 512,
+        sysprompt = sysprompt,
+        api_url = "http://localhost:11434/api/generate"
+      )
+      
+      self$eda <- EDA$new()
+    },
+    
+    project_contributors = function(output) {
+      # Data frame of contributors
+      contributors_df <- data.frame(
+        Fullname = c("Porimol Chandro", "Shokoufe Naseri", "Ho Thi Hoang Nhu"),
+        Student.ID = c(468264, 466750, 466503),
+        Email = c("p.chandro@student.uw.edu.pl", "s.naseri@student.uw.edu.pl", "t.ho2@student.uw.edu.pl"),
+        stringsAsFactors = FALSE
+      )
+      contributors_df$Student.ID <- format(contributors_df$Student.ID, scientific = FALSE)
+      
+      # Render contributors table
+      output$contributors_table <- renderTable({
           contributors_df
         },
-        rownames = FALSE)
+        rownames = FALSE
+      )
+    },
+    server = function() {
+      function(input, output, session) {
+        # call the project contributors function
+        self$project_contributors(output)
         
         updateTabsetPanel(session, "eda_summary")
         
@@ -90,13 +109,13 @@ EDAApp <- R6Class(
               # Dynamic correlation Matrix
               output$dynamic_corr_matrix <- renderPrint({
                 req(input$col)  # Ensure input$col is not NULL
-                
+
                 selected_data <- csv_data[, input$col, drop = FALSE]
                 # Correlation Matrix
                 dynamic_matrix <- cor(selected_data)
                 dynamic_matrix
               })
-              
+
               output$correlation_plot <- renderPlot({
                 req(input$col)  # Ensure input$col is not NULL
                 
@@ -124,14 +143,14 @@ EDAApp <- R6Class(
               
               output$correlation_histogram_plot <- renderPlot({
                 req(input$col)  # Ensure input$col is not NULL
-                
+
                 selected_data <- csv_data[, input$col, drop = FALSE]
-                
+
                 # Generate the correlation chart using PerformanceAnalytics
                 chart.Correlation(selected_data, histogram=TRUE, pch=19)
                 mtext("Correlation Matrix with Histogram", outer = TRUE, line = -1, cex = 1)
               })
-              
+
               updateTabsetPanel(session, "eda_summary", "analysis_summary")
 
               data_types <- sapply(csv_data, class)
@@ -139,147 +158,54 @@ EDAApp <- R6Class(
                 data_types
               })
               
-              ## Explore Data
-              # pairs plot - always
-              output$expPairsPlot <- renderPlot({
-                featurePlot(x=csv_data, 
-                            y=csv_data, 
-                            plot='pairs', auto.key=list(columns=2))
-              })
-              
+              # Visualize Data
               # generate variable selectors for individual plots
               output$expXaxisVarSelector <- renderUI({
-                selectInput('expXaxisVar', 'Variable on x-axis', 
-                            choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[1])
+                selectInput(
+                  'expXaxisVar',
+                  'Variable on x-axis',
+                  choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[1]
+                )
               })
               
-              getYaxisVarSelector <- function(geom) { 
-                # wy = with y, wo = without y (or disable)
-                widget <- selectInput('expYaxisVar', 'Variable on y-axis', 
-                                      choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[2])
-                wy <- widget
-                woy <- disable(widget)
-                switch(geom,
-                       point = wy,
-                       boxplot = wy,
-                       histogram = woy,
-                       density = woy
-                )
-              }
               output$expYaxisVarSelector <- renderUI({
-                getYaxisVarSelector(input$singlePlotGeom)
+                self$eda$getYaxisVarSelector(csv_data, input$singlePlotGeom, output)
               })
               
-              output$expColorVarSelector <- renderUI({
-                selectInput('expColorVar', 'Variable to color by', 
-                            choices=as.list(c(colnames(csv_data))))
-                            #selected=input$target)
+              observeEvent(input$singlePlotGeom, {
+                if (input$singlePlotGeom == "point") {
+                  output$expColorVarSelector <- renderUI({
+                    selectInput(
+                      'expColorVar',
+                      'Variable to color by',
+                      choices=as.list(c(colnames(csv_data)))
+                    )
+                  })
+                }
               })
-              
-              # create ggplot statement based on geom
-              add_ggplot <- function(geom) {
-                gx <- ggplot(csv_data, aes_string(x=input$expXaxisVar))
-                gxy <- ggplot(csv_data, aes_string(x=input$expXaxisVar, y=input$expYaxisVar))
-                switch(geom,
-                       point = gxy,
-                       boxplot = gxy,
-                       histogram = gx,
-                       density = gx
-                )
-              }
-              
-              # create ggplot geom
-              add_geom <- function(geom) {
-                switch(geom,
-                       point = geom_point(aes_string(color=input$expColorVar)),
-                       boxplot = geom_boxplot(aes_string(color=input$expColorVar)),
-                       histogram = geom_histogram(aes_string(color=input$expColorVar)),
-                       density = geom_density(aes_string(color=input$expColorVar))
-                )
-              }
               
               output$expSinglePlot <- renderPlot({
-                g <- add_ggplot(input$singlePlotGeom) + add_geom(input$singlePlotGeom)
-                print(g)
+                self$eda$add_ggplot(csv_data, input) + self$eda$add_geom(input)
               })
             }
           })
         })
         
+        # Llama Chatbot
         chat_data <- reactiveVal(data.frame())
-        call_api_with_curl <- function(json_payload) {
-          h <- new_handle()
-          handle_setopt(h, copypostfields = json_payload)
-          handle_setheaders(h,
-                            "Content-Type" = "application/json",
-                            "Accept" = "application/json")
-          response <- curl_fetch_memory("http://localhost:11434/api/generate", handle = h)
-          # Parse the response
-          parsed_response <- fromJSON(rawToChar(response$content))
-          return(trimws(parsed_response$response))
-        }
-        
-        call_ollama_api <- function(prompt, model_name, temperature, max_length, sysprompt) {
-          prompt <- paste0(" Based on this data: ", json_data, ", Answer this question: ", prompt)
-          # print(prompt)
-          
-          data_list <- list(
-            model = model_name, 
-            prompt = prompt, 
-            system = sysprompt,
-            stream = FALSE,
-            options = list(
-              temperature = temperature,
-              num_predict = max_length
-            )
-          )
-          json_payload <- toJSON(
-            data_list,
-            auto_unbox = TRUE
-          )
-          call_api_with_curl(json_payload)
-        }
-        
         observeEvent(input$chat_question_btn, {
           question_input <- trimws(input$question_input)
           if (question_input != "") {
             new_data <- data.frame(source = "User", message = question_input, stringsAsFactors = FALSE)
             chat_data(rbind(chat_data(), new_data))
-            gpt_res <- call_ollama_api(prompt = question_input,
-                                       model_name = model_name,
-                                       temperature = temperature,
-                                       max_length = max_length,
-                                       sysprompt = sysprompt)
+            gpt_res <- self$llm_chat$ollama_api(prompt = question_input)
             if (!is.null(gpt_res)) {
               gpt_data <- data.frame(source = "Feluda", message = gpt_res, stringsAsFactors = FALSE)
               chat_data(rbind(chat_data(), gpt_data))
             }
-            
             updateTextInput(session, "question_input", value = "")
           }
         })
-        
-        r_code_highlight <- function(code, language = "r") {
-          paste0("<pre><code class = 'language-", language, "'>", code, "</code></pre>")
-        }
-        
-        # Function to extract R code from text
-        extract_R_code <- function(text) {
-          code <- regmatches(text, regexec("```([^`]*)```", text))[[1]][2]
-          if (is.null(code) || !nzchar(code)) {
-            return("dddd")
-          }
-          return(r_code_highlight(code))
-        }
-        
-        # Function to extract text surrounding R code
-        extract_surrounding_text <- function(text) {
-          surrounding_text <- gsub("```([^`]*)```", "", text)
-          if (is.null(surrounding_text) || !nzchar(surrounding_text)) {
-            return(NULL)
-          }
-          return(trimws(surrounding_text))
-        }
         
         output$chat_response_output <- renderUI({
           chatBox <- lapply(1:nrow(chat_data()), function(i) {
@@ -288,8 +214,9 @@ EDAApp <- R6Class(
               return(NULL)
             }
             # Extract R code
-            r_code <- extract_R_code(text_code)
-            extract_text <- extract_surrounding_text(text_code)
+            r_code <- self$llm_chat$extract_R_code(text_code)
+            # Extract surrounding text
+            extract_text <- self$llm_chat$extract_surrounding_text(text_code)
             tags$div(
               class = ifelse(
                 chat_data()[i, "source"] == "User",
@@ -300,16 +227,15 @@ EDAApp <- R6Class(
                 paste0("<b>", chat_data()[i, "source"], ":</b> ", text = extract_text, r_code)
               )
             )
-            
           })
           do.call(tagList, chatBox)
         })
-        
+
       }
     }
   )
 )
 
-# Create an instance of the EDAApp class
-app <- EDAApp$new()
+# Create an instance of the LIDArApp class
+app <- LIDArApp$new()
 server <- app$server()

@@ -179,7 +179,7 @@ ui <- dashboardPage(
                 uiOutput('expColorVarSelector')
               ),
               mainPanel(
-                h4('One and Two Variable Plot'),
+                h4('Plot Selected Variables'),
                 plotOutput('expSinglePlot')
               )
             )
