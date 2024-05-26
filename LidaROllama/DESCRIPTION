@@ -1,0 +1,17 @@
+Package: LidaROllama
+Type: Package
+Title: LidaROllama: An R6 Class for Interacting with the Ollama API
+Version: 0.1.0
+Author: Porimol Chandro
+Maintainer: Porimol Chandro <porimolchandroroy@gmail.com>
+Description: Enhancing Ollama API Interface for R Programming.
+License: MIT + file LICENSE
+Imports: 
+    R6,
+    jsonlite,
+    curl
+Suggests: 
+    testthat
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.1

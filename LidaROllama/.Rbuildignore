@@ -1,0 +1,7 @@
+#### .Rbuildignore
+Create a file named `.Rbuildignore` in the root directory with the following content:
+```plaintext
+^.*\.Rproj$
+^\.Rproj\.user$
+^README\.md$
+^LICENSE$
