@@ -5,10 +5,11 @@ library(R6)
 library(reshape2)
 library(jsonify)
 library(dplyr)
+library(Rcpp)
 
 source("chat.R")
 source("eda.R")
-
+sourceCpp("corrMatrix.cpp")
 # Define the LIDArApp class
 LIDArApp <- R6Class(
   "LIDArApp",
@@ -47,6 +48,7 @@ LIDArApp <- R6Class(
         rownames = FALSE
       )
     },
+
     server = function() {
       function(input, output, session) {
         # call the project contributors function
@@ -97,9 +99,8 @@ LIDArApp <- R6Class(
                 data_types
               })
               # Correlation Matrix
-              corr_matrix <- cor(csv_data)
               output$correlation_matrix <- renderPrint({
-                corr_matrix
+                corrMatrix(as.matrix(csv_data))
               })
               
               # Update selectInput choices based on the dataset's column names
