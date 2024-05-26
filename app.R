@@ -8,10 +8,13 @@ check_and_install <- function(pkg) {
 
 # List of required packages
 packages <- c("shiny", "shinydashboard", "shinyjs", "R6", "curl",
-              "jsonlite", "jsonify", "reshape2", "ggplot2", "dplyr", "PerformanceAnalytics")
+              "jsonlite", "jsonify", "reshape2", "ggplot2", "dplyr", 
+              "PerformanceAnalytics", "this.path")
 
 # Check and install each package
 lapply(packages, check_and_install)
+# Get the path of the currently executing script
+setwd(this.path::this.dir())
 
 # Load ui and server scripts
 source("ui.R")

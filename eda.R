@@ -1,3 +1,6 @@
+library(R6)
+library(ggplot2)
+
 EDA <- R6Class("EDA",
   public = list(
     
@@ -30,12 +33,12 @@ EDA <- R6Class("EDA",
         'Variable on y-axis',
         choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[2])
       wy <- widget
-      woy <- disable(widget)
+      # woy <- disable(widget)
       switch(singlePlotGeom,
              point = wy,
              boxplot = wy,
-             histogram = woy,
-             density = woy
+             histogram = wy,
+             density = wy
       )
     }
     

@@ -1,3 +1,6 @@
+library(shiny)
+library(shinydashboard)
+
 ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
   dashboardSidebar(
@@ -169,25 +172,6 @@ ui <- dashboardPage(
           tabPanel(
             id = "visual",
             title = 'Visualization',
-            sidebarLayout(
-              sidebarPanel(
-                selectInput('singlePlotGeom', 'Select plot type', 
-                            choices=c('point', 'boxplot', 'histogram', 'density'),
-                            selected='boxplot'),
-                uiOutput('expXaxisVarSelector'),
-                uiOutput('expYaxisVarSelector'),
-                uiOutput('expColorVarSelector')
-              ),
-              mainPanel(
-                h4('Plot Selected Variables'),
-                plotOutput('expSinglePlot')
-              )
-            )
-          ),
-          
-          tabPanel(
-            id = "chat",
-            title = "Chat with Llama",
             fluidRow(
               box(
                 id = "dataframe_header",
@@ -195,13 +179,41 @@ ui <- dashboardPage(
                 width = 12,
                 fluidRow(
                   box(
-                    width = 12, 
-                    solidHeader = TRUE,
+                    width = 12,
                     DT::dataTableOutput("dataframe_header")
                   )
                 )
               )
             ),
+            fluidRow(
+              box(
+                width = 12,
+                solidHeader = TRUE,
+                fluidRow(
+                  box(
+                    width = 3,
+                    solidHeader = TRUE,
+                    selectInput('singlePlotGeom', 'Select plot type', 
+                                choices=c('point', 'boxplot', 'histogram', 'density'),
+                                selected='boxplot'),
+                    uiOutput('expXaxisVarSelector'),
+                    uiOutput('expYaxisVarSelector'),
+                    uiOutput('expColorVarSelector')
+                  ),
+                  box(
+                    width = 9,
+                    solidHeader = TRUE,
+                    title = "Plot Selected Variables",
+                    plotOutput('expSinglePlot')
+                  )
+                )
+              )
+            )
+          ),
+          
+          tabPanel(
+            id = "chat",
+            title = "Chat with Llama",
             fluidRow(
               box(
                 title = "Chat with your dataset using Llama",

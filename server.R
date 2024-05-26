@@ -1,15 +1,13 @@
+library(shiny)
+library(shinydashboard)
 library(PerformanceAnalytics)
+library(R6)
+library(reshape2)
+library(jsonify)
+library(dplyr)
+
 source("chat.R")
 source("eda.R")
-
-sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
-This project is a part of the course of 'Advanced R' of the programme 'Data Science and Business Analytics' at the University of Warsaw.
-Be mindfull that Porimol, Nhu and Shoku are the contributors of this project, who gave you this name.
-Your main responsibility to assist users only about R programming based on the given 'CSV dataset' and related question based on the given dataset.
-If users asked you to provide statistics of the dataset, please do help them by providing R code.
-If users ask you about any other programming related question, politely explain them that your responsibility only about R programming and given dataset."
-# sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
-# Your main responsibility to assist users only about R programming and if user ask you to perform any task on the given data do it."
 
 # Define the LIDArApp class
 LIDArApp <- R6Class(
@@ -18,19 +16,20 @@ LIDArApp <- R6Class(
     llm_chat = NULL,
     eda = NULL,
     
-    initialize = function() {
+    initialize = function(sys_prompt) {
       # Initialize the LLMChat object
       self$llm_chat <- LLMChat$new(
         model_name = "llama3:latest",
         temperature = 0.7,
         max_length = 512,
-        sysprompt = sysprompt,
+        sysprompt = sys_prompt,
         api_url = "http://localhost:11434/api/generate"
       )
-      
+      # Initialize the EDA object
       self$eda <- EDA$new()
     },
     
+    # Function about project contributors
     project_contributors = function(output) {
       # Data frame of contributors
       contributors_df <- data.frame(
@@ -214,9 +213,10 @@ LIDArApp <- R6Class(
               return(NULL)
             }
             # Extract R code
-            r_code <- self$llm_chat$extract_R_code(text_code)
+            r_code <- self$llm_chat$extract_code(text_code)
+
             # Extract surrounding text
-            extract_text <- self$llm_chat$extract_surrounding_text(text_code)
+            surrounding_text <- self$llm_chat$extract_text(text_code)
             tags$div(
               class = ifelse(
                 chat_data()[i, "source"] == "User",
@@ -224,7 +224,11 @@ LIDArApp <- R6Class(
                 "alert alert-success"
               ),
               HTML(
-                paste0("<b>", chat_data()[i, "source"], ":</b> ", text = extract_text, r_code)
+                if (length(r_code) > 0) {
+                  paste0("<b>", chat_data()[i, "source"], ":</b> ", text = surrounding_text, r_code)
+                } else {
+                  paste0("<b>", chat_data()[i, "source"], ":</b> ", text = surrounding_text)
+                }
               )
             )
           })
@@ -236,6 +240,15 @@ LIDArApp <- R6Class(
   )
 )
 
+sys_prompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
+This project is a part of the course of 'Advanced R' of the programme 'Data Science and Business Analytics' at the University of Warsaw.
+Be mindfull that Porimol, Nhu and Shoku are the contributors of this project, who gave you this name.
+Your main responsibility to assist users only about R programming based on the given 'CSV dataset' and related question based on the given dataset.
+If users asked you to provide statistics of the dataset, please do help them by providing R code.
+If users ask you about any other programming related question, politely explain them that your responsibility only about R programming and given dataset."
+# sysprompt <- "You are a helpful assistant. Your name is Feluda and your and you're powered by Meta's open source Llama2 model.
+# Your main responsibility to assist users only about R programming and if user ask you to perform any task on the given data do it."
+
 # Create an instance of the LIDArApp class
-app <- LIDArApp$new()
+app <- LIDArApp$new(sys_prompt)
 server <- app$server()
