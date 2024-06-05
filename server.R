@@ -6,10 +6,17 @@ library(reshape2)
 library(jsonify)
 library(dplyr)
 library(Rcpp)
+library(purrr)
 
 source("chat.R")
 source("eda.R")
 sourceCpp("corrMatrix.cpp")
+
+# Define the CSV validation function
+validate_csv <- function(data) {
+  if (ncol(data) == 0) stop("The uploaded file is not a valid CSV or has no columns.")
+}
+
 # Define the LIDArApp class
 LIDArApp <- R6Class(
   "LIDArApp",
@@ -59,133 +66,115 @@ LIDArApp <- R6Class(
         csv_to_json_data <- reactiveVal(NULL)
         observeEvent(input$file$datapath, {
           observe({
-            # Disable the "Analysis" button if no file is uploaded
             if (is.null(input$file$datapath)) {
-              print("No file uploaded")
+              message("No file uploaded")
             } else {
-              print("File uploaded")
-              
-              # Read the uploaded CSV file
-              csv_data <- read.csv(input$file$datapath)
-              # json_data <<- jsonify::to_json(csv_data)
-              json_data <<- csv_to_json_data(jsonify::to_json(csv_data))
-              
-              # Render dataframe header
-              output$dataframe <- DT::renderDataTable({
-                if (!is.null(input$file)) {
+              tryCatch({
+                message("File uploaded")
+                
+                # Read and validate the uploaded CSV file
+                csv_data <- read.csv(input$file$datapath, stringsAsFactors = FALSE)
+                validate_csv(csv_data)
+                
+                json_data <<- csv_to_json_data(jsonify::to_json(as.list(csv_data)))
+                
+                output$dataframe <- DT::renderDataTable({
                   DT::datatable(csv_data)
-                }
-              })
-              
-              # Render dataframe header
-              output$dataframe_header <- DT::renderDataTable({
-                if (!is.null(input$file)) {
+                })
+                
+                output$dataframe_header <- DT::renderDataTable({
                   DT::datatable(head(csv_data, 5))
-                }
-              })
-              
-              # Perform summary statistics or any other analysis you need
-              summary_data <- summary(csv_data)
-              # Update the output for the "Summary" tab
-              output$null_values_output <- renderPrint({
-                sum(is.na(csv_data))
-              })
-              output$analysis_summary <- renderPrint({
-                summary_data
-              })
-              # Extract data types
-              data_types <- sapply(csv_data, class)
-              output$data_types_output <- renderPrint({
-                data_types
-              })
-              # Correlation Matrix
-              output$correlation_matrix <- renderPrint({
-                corrMatrix(as.matrix(csv_data))
-              })
-              
-              # Update selectInput choices based on the dataset's column names
-              updateSelectInput(session, "col", choices = colnames(csv_data))
-              
-              # Dynamic correlation Matrix
-              output$dynamic_corr_matrix <- renderPrint({
-                req(input$col)  # Ensure input$col is not NULL
-
-                selected_data <- csv_data[, input$col, drop = FALSE]
-                # Correlation Matrix
-                dynamic_matrix <- cor(selected_data)
-                dynamic_matrix
-              })
-
-              output$correlation_plot <- renderPlot({
-                req(input$col)  # Ensure input$col is not NULL
+                })
                 
-                selected_data <- csv_data[, input$col, drop = FALSE]
-                # Correlation Matrix
-                corr_matrix1 <- cor(selected_data)
+                summary_data <- summary(csv_data)
+                output$null_values_output <- renderPrint({
+                  sum(is.na(csv_data))
+                })
+                output$analysis_summary <- renderPrint({
+                  summary_data
+                })
                 
-                # Convert the correlation matrix to a long-format dataframe
-                corr_df <- melt(corr_matrix1)
+                # Extract data types using purrr::map_chr
+                data_types <- map_chr(csv_data, class)
+                output$data_types_output <- renderPrint({
+                  data_types
+                })
                 
-                # Plot the correlation matrix using ggplot2
-                ggplot(corr_df, aes(Var2, Var1, fill = value)) +
-                  geom_tile(color = "white") +
-                  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), space = "Lab",
-                                       name="Correlation") +
-                  labs(
-                    title = "Correlation color range (-1, 1)",
-                    x = "X-axis Feature Variables",
-                    y = "Y-axis Feature Variables"
-                  ) +
-                  theme_minimal() +
-                  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 8, hjust = 1)) +
-                  coord_fixed()
-              })
-              
-              output$correlation_histogram_plot <- renderPlot({
-                req(input$col)  # Ensure input$col is not NULL
-
-                selected_data <- csv_data[, input$col, drop = FALSE]
-
-                # Generate the correlation chart using PerformanceAnalytics
-                chart.Correlation(selected_data, histogram=TRUE, pch=19)
-                mtext("Correlation Matrix with Histogram", outer = TRUE, line = -1, cex = 1)
-              })
-
-              updateTabsetPanel(session, "eda_summary", "analysis_summary")
-
-              data_types <- sapply(csv_data, class)
-              output$data_types_output <- renderPrint({
-                data_types
-              })
-              
-              # Visualize Data
-              # generate variable selectors for individual plots
-              output$expXaxisVarSelector <- renderUI({
-                selectInput(
-                  'expXaxisVar',
-                  'Variable on x-axis',
-                  choices=as.list(colnames(csv_data)), selected=colnames(csv_data)[1]
-                )
-              })
-              
-              output$expYaxisVarSelector <- renderUI({
-                self$eda$getYaxisVarSelector(csv_data, input$singlePlotGeom, output)
-              })
-              
-              observeEvent(input$singlePlotGeom, {
-                if (input$singlePlotGeom == "point") {
-                  output$expColorVarSelector <- renderUI({
-                    selectInput(
-                      'expColorVar',
-                      'Variable to color by',
-                      choices=as.list(c(colnames(csv_data)))
-                    )
-                  })
-                }
-              })
-              
-              output$expSinglePlot <- renderPlot({
-                self$eda$add_ggplot(csv_data, input) + self$eda$add_geom(input)
+                output$correlation_matrix <- renderPrint({
+                  corrMatrix(as.matrix(csv_data))
+                })
+                
+                updateSelectInput(session, "col", choices = colnames(csv_data))
+                
+                output$dynamic_corr_matrix <- renderPrint({
+                  req(input$col)
+                  selected_data <- csv_data[, input$col, drop = FALSE]
+                  validate(
+                    need(ncol(selected_data) > 1, "Select more than one column for correlation matrix.")
+                  )
+                  dynamic_matrix <- cor(selected_data)
+                  dynamic_matrix
+                })
+                
+                output$correlation_plot <- renderPlot({
+                  req(input$col)
+                  selected_data <- csv_data[, input$col, drop = FALSE]
+                  validate(
+                    need(ncol(selected_data) > 1, "Select more than one column for correlation plot.")
+                  )
+                  corr_matrix1 <- cor(selected_data)
+                  corr_df <- melt(corr_matrix1)
+                  
+                  ggplot(corr_df, aes(Var2, Var1, fill = value)) +
+                    geom_tile(color = "white") +
+                    scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), space = "Lab", name="Correlation") +
+                    labs(title = "Correlation color range (-1, 1)", x = "X-axis Feature Variables", y = "Y-axis Feature Variables") +
+                    theme_minimal() +
+                    theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 8, hjust = 1)) +
+                    coord_fixed()
+                })
+                
+                output$correlation_histogram_plot <- renderPlot({
+                  req(input$col)
+                  selected_data <- csv_data[, input$col, drop = FALSE]
+                  validate(
+                    need(ncol(selected_data) > 1, "Select more than one column for correlation histogram plot.")
+                  )
+                  chart.Correlation(selected_data, histogram=TRUE, pch=19)
+                  mtext("Correlation Matrix with Histogram", outer = TRUE, line = -1, cex = 1)
+                })
+                
+                updateTabsetPanel(session, "eda_summary", "analysis_summary")
+                
+                output$expXaxisVarSelector <- renderUI({
+                  selectInput(
+                    'expXaxisVar',
+                    'Variable on x-axis',
+                    choices = as.list(colnames(csv_data)), selected = colnames(csv_data)[1]
+                  )
+                })
+                
+                output$expYaxisVarSelector <- renderUI({
+                  self$eda$getYaxisVarSelector(csv_data, input$singlePlotGeom, output)
+                })
+                
+                observeEvent(input$singlePlotGeom, {
+                  if (input$singlePlotGeom == "point") {
+                    output$expColorVarSelector <- renderUI({
+                      selectInput(
+                        'expColorVar',
+                        'Variable to color by',
+                        choices = as.list(c(colnames(csv_data)))
+                      )
+                    })
+                  }
+                })
+                
+                output$expSinglePlot <- renderPlot({
+                  self$eda$add_ggplot(csv_data, input) + self$eda$add_geom(input)
+                })
+              }, error = function(e) {
+                showNotification(paste("Error: ", e$message), type = "error")
               })
             }
           })
@@ -198,7 +187,12 @@ LIDArApp <- R6Class(
           if (question_input != "") {
             new_data <- data.frame(source = "User", message = question_input, stringsAsFactors = FALSE)
             chat_data(rbind(chat_data(), new_data))
-            gpt_res <- self$llm_chat$ollama_api(prompt = question_input)
+            gpt_res <- tryCatch({
+              self$llm_chat$ollama_api(prompt = question_input)
+            }, error = function(e) {
+              showNotification(paste("Error: ", e$message), type = "error")
+              NULL
+            })
             if (!is.null(gpt_res)) {
               gpt_data <- data.frame(source = "Feluda", message = gpt_res, stringsAsFactors = FALSE)
               chat_data(rbind(chat_data(), gpt_data))
