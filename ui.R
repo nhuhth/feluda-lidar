@@ -5,8 +5,8 @@ ui <- dashboardPage(
   dashboardHeader(title = "Feluda Analytica", disable = FALSE),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-      menuItem("EDA", tabName = "eda", icon = icon("file"), selected = TRUE)
+      menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard"), selected = TRUE),
+      menuItem("EDA", tabName = "eda", icon = icon("file"))
     )
   ),
   dashboardBody(
